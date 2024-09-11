@@ -1,0 +1,69 @@
+name: Build and Push Docker Image
+on:
+  push:
+    branches:
+      - main
+      - dev
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      # - name: Checkout
+      #   uses: actions/checkout@v2
+      # - name: set up  QEMU
+      #   uses: docker/setup-qemu-action@v2
+      # - name: setup docker Buildx
+      #   uses: docker/setup-buildx-action@v2
+      # - name: Login TO DockerHub
+      #   uses: docker/login-action@v2
+      #   with:
+      #     username: ${{secrets.DOCKER_USERNAME}}
+      #     password: ${{secrets.DOCKER_TOKEN}}
+      # - name: Build to push(Master)
+      #   if: github.ref == 'ref/heads/master'
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     context: .
+      #     file: ./Dockerfile
+      #     push: true
+      #     # tags: ${{secrets.DOCKER_USERNAME}}/image:latest
+      #     tags: ${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}}
+      # # =====================end of the CI part  ===================
+      # # ***************** Start CD ************
+      # - name: Deploy to EC2
+      #   env:
+      #     PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
+      #     HOSTNAME: ${{secrets.HOST_NAME}}
+      #     USER_NAME: ${{ secrets.USERNAME }}
+      #     IMAGE_TAG: ${{secrets.IMAGE_TAG}}
+      #     IMAGE_NAME: ${{secrets.IMAGE_NAME}}
+      #   run: echo \"$PRIVATE_KEY" > private_key.pem && chmod -R 600 private_key.pem ls sed -i -e 's | IMAGE_TAG:|'"$IMAGE_TAG"' | '${{github.workspace}}/docker-compose.yml' sed -i -e 's |DOCKER_REGISTRY |' "$IMAGE_NAME"' | ${{github.workspace}}/docker-compose.yml scp -o StrictHostKeyCheckin=no -i private_key.pem ${{github.workspace}}/docker-compose.yml ${USER_NAME}@${HOST_NAME} ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER_NAME}@${HOSTNAME}' cd /tmp docker-compose up -d '
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Docker Image Name
+        run: echo "IMAGE_NAME=mamunurrashid123/crm-backend" >> $GITHUB_ENV
+      - name: Docker Image Tag
+        run: echo "IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Build and push (main)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: ${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}}
+      - name: Deploy on AWS EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOSTNAME: ${{ secrets.HOST_NAME }}
+          USER_NAME: ${{ secrets.USERNAME }}
+          IMAGE_TAG: ${{env.IMAGE_TAG}}
+          IMAGE_NAME: ${{env.IMAGE_NAME}}
+        run: "echo \"$PRIVATE_KEY\" > private_key.pem && chmod 600 private_key.pem\nls\nsed -i -e 's|IMAGE_TAG|'\"$IMAGE_TAG\"'|' ${{github.workspace}}/docker-compose.yml\nsed -i -e 's|DOCKER_REGISTRY|'\"$IMAGE_NAME\"'|' ${{github.workspace}}/docker-compose.yml\nscp -o StrictHostKeyChecking=no -i private_key.pem ${{github.workspace}}/docker-compose.yml ${USER_NAME}@${HOSTNAME}:/tmp\nssh -o StrictHostKeyChecking=no -i private_key.pem ${USER_NAME}@${HOSTNAME} '\n   \n    cd /tmp\n    docker-compose up -d\n'"
