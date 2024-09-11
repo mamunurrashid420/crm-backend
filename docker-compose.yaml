@@ -1,0 +1,10 @@
+version: "2"
+services:
+  app:
+    image: DOCKER_REGISTRY:IMAGE_TAG
+    #container_name: python-flask-cicd
+    ports:
+      - "5001-5003:5000"
+    deploy:
+      mode: replicated
+      replicas: 3
